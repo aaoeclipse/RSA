@@ -1,23 +1,36 @@
 import numpy as np
 import random, sys, os
-
+import math as math
 class RSA:
     """ RSA encrypts and decrypts """
 
-    def __init__(self, primeNum=0):
+    def __init__(self, primeNum=0, encrypt=False, decrypt=False, enc_and_decrypt=False, mssg=''):
         """  """
+        
         if primeNum != 0:
             # First time you can create a file
-            print('Generating file with primary numbers...')
-            self.create_prime_file(1,primeNum)
-            print('Created Succesfuly!')
+            print('[*] Generating file with primary numbers...')
+            self.prime = self.create_prime_file(1,primeNum)
+            print('[+] Created Succesfuly!')
+            print('[*] Generating keys...')
+            self.generate_keys()
             return
+        else:
+            self.prime = self.load_prime_numbers()
+            if encrypt:
+                # self.generate_keys()
+                self.load_keys()
+                self.cipher(mssg)
+            elif decrypt:
+                self.load_keys()
+                numMssg = []
+                for ch in mssg.split(','):
+                    numMssg.append(int(ch))
+                self.decipher(numMssg)
+            elif enc_and_decrypt:
+                self.load_keys()
+                self.decipher(self.cipher(mssg))
 
-        self.prime = self.load_prime_numbers()
-        # self.generate_keys()
-        self.load_keys()
-        self.decipher(self.cipher('abc'))
-    
     def generate_keys(self):
         self.generate_N()
         self.publicKey = self.get_public_key()
@@ -32,7 +45,7 @@ class RSA:
         """ gets prime numbers between params init and final """
         primeNumbers = np.array([])
         for num in range(init,final):
-            if (num % 1000 == 0):
+            if (num % 100 == 0):
                 print('Loading... {}%'.format(num/final * 100))
             prime = True
             for i in range(2,num):
@@ -42,7 +55,10 @@ class RSA:
                 primeNumbers = np.hstack((primeNumbers, [num]))
         if create:
             np.save('primeNum', primeNumbers)
+            print('Loading...100%!')
+            return primeNumbers
         else:
+            print('Loading...100%!')
             return primeNumbers
 
     def generate_N(self):
@@ -100,24 +116,93 @@ class RSA:
         if self.publicKey is None:
             print('[*] Please load the keys.')
             exit(0)
-        mssgEncrypted = np.array([])
+        mssgEncrypted = []
         for letter in mssg:
-            element = np.array([ord(letter) - 96])
-            element = element ** self.publicKey[0] % self.publicKey[1]
-            mssgEncrypted = np.hstack((mssgEncrypted, element))
-        print(mssgEncrypted)
+            element = (ord(letter) - 97)
+            element = pow(element, self.publicKey[0].item(), self.publicKey[1].item())
+
+            element = int(element) % self.publicKey[1]
+            mssgEncrypted.append(int(element))
+        print('Encrypted Message: ({})'.format(mssgEncrypted))
         return mssgEncrypted
 
     def decipher(self, cipher):
         """ test """
+        num = []
+        print('Decrypted Message: (', end='')
         for x in cipher:
-            element = int((x ** self.privateKey[0]) % self.privateKey[1])
-            print(chr(element+96), end='')
+            # result = (x ** self.privateKey[0]) % self.privateKey[1]
+            element = pow(x, self.privateKey[0].item(), self.privateKey[1].item())
+            num.append(element)
+            print('{}'.format(chr(element + 97)), end='')
+            # element = int((x ** self.privateKey[0]) % self.privateKey[1])
+            # print(chr(element+96), end='')
+        print(')')
+        print('Decrypted Message in Numbers: {}'.format(num))
+
+
 
     def load_keys(self):
-        self.privateKey = np.load('privateKey.npy')
-        self.publicKey = np.load('publicKey.npy')
+        self.privateKey = np.asarray(np.load('privateKey.npy'))
+        self.publicKey = np.asarray(np.load('publicKey.npy'))
         print('private key: {}'.format(self.privateKey))
         print('public key: {}'.format(self.publicKey))
+    
+    
 
-rsa = RSA()
+def help():
+    print('')
+    print('WELCOME to RSA Desipher')
+    print('Instrucctions: ')
+    print('-help: to show help menu')
+    print('-keys [# of prime num to use]: generates the keys and save it on privateKey.npy and publicKey.npy')
+    print('\t if [# of prime num to use] is left empty, uses 50 as default')
+    print('=====================================')
+    print('Keys must have been created from this point onwards')
+    print('=====================================')
+    print('-e [mssg]: encrypts message with keys created')
+    print('-e "[mssg with many words]": encrypts message with keys created')
+    print('-d [num separated by ,]: decrypt message with keys created')
+    print('\t EXAMPLE:')
+    print('\t 75, 84, 29, 29, 50')
+    print('-de [mssg]: encrypts and decrypts given message')
+    print('')
+
+if len(sys.argv) == 1:
+    help()
+else:
+    if sys.argv[1] == '-help':
+        help()
+    elif sys.argv[1] == '-keys':
+        if len(sys.argv) == 3:
+            num = sys.argv[2]
+            if num.isnumeric():
+                rsa = RSA(int(num))
+        else:
+            rsa = RSA(50)
+
+    elif sys.argv[1] == '-e':
+        if len(sys.argv) == 2:
+            print('[-] No message! for more help use -h or -help')
+            exit(0)
+        mssg = sys.argv[2]
+        if len(mssg) == 0:
+            print('[-] No message! for more help use -h or -help')
+        rsa = RSA(encrypt=True, mssg=mssg)
+    elif sys.argv[1] == '-d':
+        if len(sys.argv) == 2:
+            print('[-] No message! for more help use -h or -help')
+            exit(0)
+        mssg = sys.argv[2]
+        if len(sys.argv) > 3:
+            for i in range(3,len(sys.argv)):
+                mssg += sys.argv[i]
+        rsa = RSA(decrypt=True, mssg=mssg)
+    elif sys.argv[1] == '-de':
+        if len(sys.argv) == 2:
+            print('[-] No message! for more help use -h or -help')
+            exit(0)
+        mssg = sys.argv[2]
+        rsa = RSA(enc_and_decrypt=True, mssg=mssg)
+    else:
+        help()
