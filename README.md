@@ -5,9 +5,9 @@
 -keys [# of prime num to use]: generates the keys and save it on privateKey.npy and publicKey.npy
 	 if [# of prime num to use] is left empty, uses 50 as default
    
-=====================================
-Keys must have been created from this point onwards
-=====================================
+
+## Keys must have been created from this point onwards
+
 
 -e [mssg]: encrypts message with keys created
 -e "[mssg with many words]": encrypts message with keys created
